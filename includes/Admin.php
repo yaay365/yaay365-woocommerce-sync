@@ -48,9 +48,8 @@ class Admin
     {
         register_setting('yaay365_sync_settings', 'yaay365_sync_api_url');
         register_setting('yaay365_sync_settings', 'yaay365_sync_sync_endpoint');
-        register_setting('yaay365_sync_settings', 'yaay365_sync_auth_email');
-        register_setting('yaay365_sync_settings', 'yaay365_sync_auth_password');
-        register_setting('yaay365_sync_settings', 'yaay365_sync_company_id');
+        register_setting('yaay365_sync_settings', 'yaay365_sync_public_key');
+        register_setting('yaay365_sync_settings', 'yaay365_sync_secret_key');
         register_setting('yaay365_sync_settings', 'yaay365_sync_auto_sync');
         register_setting('yaay365_sync_settings', 'yaay365_sync_sync_on_save');
         register_setting('yaay365_sync_settings', 'yaay365_sync_log_enabled');

@@ -74,12 +74,15 @@ $published_products = $product_count->publish;
                         <td><?php echo esc_html(get_option('yaay365_sync_api_url', 'https://yaay365.com')); ?></td>
                     </tr>
                     <tr>
-                        <td><strong><?php _e('Email:', 'yaay365-sync'); ?></strong></td>
-                        <td><?php echo esc_html(get_option('yaay365_sync_auth_email') ?: __('Not configured', 'yaay365-sync')); ?></td>
+                        <td><strong><?php _e('Public Key:', 'yaay365-sync'); ?></strong></td>
+                        <td><?php
+                            $pk = get_option('yaay365_sync_public_key');
+                            echo $pk ? esc_html(substr($pk, 0, 8) . '••••••••') : esc_html(__('Not configured', 'yaay365-sync'));
+                        ?></td>
                     </tr>
                     <tr>
-                        <td><strong><?php _e('Company ID:', 'yaay365-sync'); ?></strong></td>
-                        <td><?php echo esc_html(get_option('yaay365_sync_company_id') ?: __('Not configured', 'yaay365-sync')); ?></td>
+                        <td><strong><?php _e('Secret Key:', 'yaay365-sync'); ?></strong></td>
+                        <td><?php echo get_option('yaay365_sync_secret_key') ? esc_html__('Configured', 'yaay365-sync') : esc_html__('Not configured', 'yaay365-sync'); ?></td>
                     </tr>
                     <tr>
                         <td><strong><?php _e('Sync on Save:', 'yaay365-sync'); ?></strong></td>

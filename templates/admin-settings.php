@@ -22,10 +22,10 @@ if (!defined('ABSPATH')) {
                     <input type="url" 
                            id="yaay365_sync_api_url" 
                            name="yaay365_sync_api_url" 
-                           value="<?php echo esc_attr(get_option('yaay365_sync_api_url', 'https://yaay365.com')); ?>" 
+                           value="<?php echo esc_attr(get_option('yaay365_sync_api_url', 'https://api.yaay365.com')); ?>" 
                            class="regular-text" 
-                           placeholder="https://yaay365.com">
-                    <p class="description"><?php _e('The base URL of your Yaay365 API (e.g., https://yaay365.com or https://api.yaay365.com)', 'yaay365-sync'); ?></p>
+                           placeholder="https://api.yaay365.com">
+                    <p class="description"><?php _e('The base URL of the Yaay365 API (default: https://api.yaay365.com)', 'yaay365-sync'); ?></p>
                 </td>
             </tr>
 
@@ -37,53 +37,40 @@ if (!defined('ABSPATH')) {
                     <input type="text" 
                            id="yaay365_sync_sync_endpoint" 
                            name="yaay365_sync_sync_endpoint" 
-                           value="<?php echo esc_attr(get_option('yaay365_sync_sync_endpoint', '/api/catalogues/sync')); ?>" 
+                           value="<?php echo esc_attr(get_option('yaay365_sync_sync_endpoint', '/v1/catalogues/sync')); ?>" 
                            class="regular-text" 
-                           placeholder="/api/catalogues/sync">
-                    <p class="description"><?php _e('The endpoint path for syncing. Try: /api/catalogues/sync or /catalogues/sync', 'yaay365-sync'); ?></p>
+                           placeholder="/v1/catalogues/sync">
+                    <p class="description"><?php _e('The endpoint path for syncing (default: /v1/catalogues/sync)', 'yaay365-sync'); ?></p>
                 </td>
             </tr>
 
             <tr>
                 <th scope="row">
-                    <label for="yaay365_sync_auth_email"><?php _e('Email', 'yaay365-sync'); ?></label>
+                    <label for="yaay365_sync_public_key"><?php _e('Public Key', 'yaay365-sync'); ?></label>
                 </th>
                 <td>
-                    <input type="email" 
-                           id="yaay365_sync_auth_email" 
-                           name="yaay365_sync_auth_email" 
-                           value="<?php echo esc_attr(get_option('yaay365_sync_auth_email')); ?>" 
-                           class="regular-text">
-                    <p class="description"><?php _e('Your Yaay365 account email', 'yaay365-sync'); ?></p>
+                    <input type="text" 
+                           id="yaay365_sync_public_key" 
+                           name="yaay365_sync_public_key" 
+                           value="<?php echo esc_attr(get_option('yaay365_sync_public_key')); ?>" 
+                           class="regular-text"
+                           autocomplete="off">
+                    <p class="description"><?php _e('Your Yaay365 API public key (X-Public-Key)', 'yaay365-sync'); ?></p>
                 </td>
             </tr>
 
             <tr>
                 <th scope="row">
-                    <label for="yaay365_sync_auth_password"><?php _e('Password', 'yaay365-sync'); ?></label>
+                    <label for="yaay365_sync_secret_key"><?php _e('Secret Key', 'yaay365-sync'); ?></label>
                 </th>
                 <td>
                     <input type="password" 
-                           id="yaay365_sync_auth_password" 
-                           name="yaay365_sync_auth_password" 
-                           value="<?php echo esc_attr(get_option('yaay365_sync_auth_password')); ?>" 
-                           class="regular-text">
-                    <p class="description"><?php _e('Your Yaay365 account password', 'yaay365-sync'); ?></p>
-                </td>
-            </tr>
-
-            <tr>
-                <th scope="row">
-                    <label for="yaay365_sync_company_id"><?php _e('Company ID', 'yaay365-sync'); ?></label>
-                </th>
-                <td>
-                    <input type="number" 
-                           id="yaay365_sync_company_id" 
-                           name="yaay365_sync_company_id" 
-                           value="<?php echo esc_attr(get_option('yaay365_sync_company_id')); ?>" 
-                           class="small-text" 
-                           min="1">
-                    <p class="description"><?php _e('Your company ID in the Yaay365 system', 'yaay365-sync'); ?></p>
+                           id="yaay365_sync_secret_key" 
+                           name="yaay365_sync_secret_key" 
+                           value="<?php echo esc_attr(get_option('yaay365_sync_secret_key')); ?>" 
+                           class="regular-text"
+                           autocomplete="off">
+                    <p class="description"><?php _e('Your Yaay365 API secret key (X-Secret-Key). This is shown only once when generated.', 'yaay365-sync'); ?></p>
                 </td>
             </tr>
 

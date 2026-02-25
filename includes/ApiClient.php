@@ -6,9 +6,8 @@ class ApiClient
 {
     private $api_url;
     private $sync_endpoint;
-    private $auth_email;
-    private $auth_password;
-    private $company_id;
+    private $public_key;
+    private $secret_key;
     private $logger;
 
     public function __construct($logger)
@@ -19,16 +18,24 @@ class ApiClient
 
     private function load_settings()
     {
-        $this->api_url = get_option('yaay365_sync_api_url', 'https://yaay365.com');
-        $this->sync_endpoint = get_option('yaay365_sync_sync_endpoint', '/api/catalogues/sync');
-        $this->auth_email = get_option('yaay365_sync_auth_email');
-        $this->auth_password = get_option('yaay365_sync_auth_password');
-        $this->company_id = get_option('yaay365_sync_company_id');
+        $this->api_url = get_option('yaay365_sync_api_url', 'https://api.yaay365.com');
+
+        // Always use the API-key endpoint; self-heal any stale stored value
+        $stored_endpoint = get_option('yaay365_sync_sync_endpoint', '/v1/catalogues/sync');
+        $legacy_endpoints = ['/api/catalogues/sync', '/catalogues/sync'];
+        if (in_array($stored_endpoint, $legacy_endpoints, true)) {
+            $stored_endpoint = '/v1/catalogues/sync';
+            update_option('yaay365_sync_sync_endpoint', $stored_endpoint);
+        }
+        $this->sync_endpoint = $stored_endpoint;
+
+        $this->public_key = get_option('yaay365_sync_public_key');
+        $this->secret_key = get_option('yaay365_sync_secret_key');
     }
 
     public function is_configured()
     {
-        return !empty($this->api_url) && !empty($this->auth_email) && !empty($this->auth_password) && !empty($this->company_id);
+        return !empty($this->api_url) && !empty($this->public_key) && !empty($this->secret_key);
     }
 
     public function test_connection()
@@ -36,87 +43,87 @@ class ApiClient
         if (!$this->is_configured()) {
             return [
                 'success' => false,
-                'message' => __('API is not configured. Please enter Email, Password, and Company ID.', 'yaay365-sync')
+                'message' => __('API is not configured. Please enter your Public Key and Secret Key.', 'yaay365-sync')
             ];
         }
 
-        // Try multiple endpoint variations
-        $endpoints_to_try = [
-            rtrim($this->api_url, '/') . $this->sync_endpoint,
-            rtrim($this->api_url, '/') . '/catalogues/sync',
-            rtrim($this->api_url, '/') . '/api/catalogues/sync',
-        ];
-        
-        // Remove duplicates
-        $endpoints_to_try = array_unique($endpoints_to_try);
-        
-        $test_results = [];
-        
-        foreach ($endpoints_to_try as $endpoint) {
-            // Send a minimal valid product so Laravel validation passes (avoids 422)
-            $response = wp_remote_post($endpoint, [
-                'headers' => ['Content-Type' => 'application/json', 'Accept' => 'application/json'],
-                'body' => json_encode([
-                    'company_id' => (int) $this->company_id,
-                    'auth_email' => $this->auth_email,
-                    'auth_password' => $this->auth_password,
-                    'products' => [
-                        [
-                            'name' => 'Connection Test Product',
-                            'sku' => 'YAAY365-CONN-TEST'
-                        ]
-                    ]
-                ]),
-                'timeout' => 10
-            ]);
+        $endpoint = rtrim($this->api_url, '/') . $this->sync_endpoint;
 
-            if (is_wp_error($response)) {
-                $test_results[] = [
-                    'endpoint' => $endpoint,
-                    'status' => 'error',
-                    'message' => $response->get_error_message()
-                ];
-                continue;
-            }
+        $response = wp_remote_post($endpoint, [
+            'headers' => [
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
+                'X-Public-Key'  => $this->public_key,
+                'X-Secret-Key'  => $this->secret_key,
+            ],
+            // Send one minimal product — empty array causes a 500 server-side.
+            // Using a fixed SKU means it upserts the same record every time.
+            'body'    => json_encode([
+                'products' => [
+                    [
+                        'name'   => '[Yaay365 Connection Test]',
+                        'sku'    => 'YAAY365-CONN-TEST',
+                        'status' => 'draft',
+                    ],
+                ],
+            ]),
+            'timeout' => 15,
+        ]);
 
-            $status_code = wp_remote_retrieve_response_code($response);
-            $body_content = wp_remote_retrieve_body($response);
-            $decoded = json_decode($body_content, true);
-            
-            if ($status_code >= 200 && $status_code < 300) {
-                // Success! Update the endpoint setting
-                update_option('yaay365_sync_sync_endpoint', str_replace(rtrim($this->api_url, '/'), '', $endpoint));
-                
-                return [
-                    'success' => true,
-                    'message' => sprintf(__('Connection successful! Using endpoint: %s', 'yaay365-sync'), $endpoint)
-                ];
-            }
-            
-            $error_msg = isset($decoded['message']) ? $decoded['message'] : 'Unknown error';
-            $test_results[] = [
-                'endpoint' => $endpoint,
-                'status' => $status_code,
-                'message' => $error_msg
+        if (is_wp_error($response)) {
+            return [
+                'success' => false,
+                'message' => $response->get_error_message()
             ];
         }
 
-        // All endpoints failed, return detailed info
-        $error_message = __('All endpoints failed. Tested:', 'yaay365-sync') . '<br>';
-        foreach ($test_results as $result) {
-            $error_message .= sprintf(
-                '<br>• %s → %s: %s',
-                $result['endpoint'],
-                $result['status'],
-                $result['message']
-            );
+        $status_code  = wp_remote_retrieve_response_code($response);
+        $body_content = wp_remote_retrieve_body($response);
+        $decoded      = json_decode($body_content, true);
+
+        // 2xx  → full success
+        // 422  → authenticated but validation rejected our empty payload — still proves keys work
+        if ($status_code >= 200 && $status_code < 300) {
+            return [
+                'success' => true,
+                'message' => sprintf(__('Connection successful! Endpoint: %s', 'yaay365-sync'), $endpoint),
+            ];
         }
-        
-        $error_message .= '<br><br>' . __('Please check: 1) Laravel route is in routes/api.php or routes/web.php, 2) Run "php artisan route:clear" on server, 3) Check CORS settings', 'yaay365-sync');
+
+        if ($status_code === 422) {
+            return [
+                'success' => true,
+                'message' => sprintf(
+                    __('Connection successful! API keys authenticated. (Endpoint: %s)', 'yaay365-sync'),
+                    $endpoint
+                ),
+            ];
+        }
+
+        // Build a useful error message from whatever the server returned.
+        if (!empty($decoded['message'])) {
+            $error_msg = $decoded['message'];
+        } elseif (!empty($decoded['error'])) {
+            $error_msg = $decoded['error'];
+        } else {
+            // Fall back to the raw body (truncated) so the user can see what happened.
+            $error_msg = $body_content ? substr(wp_strip_all_tags($body_content), 0, 300) : sprintf('HTTP %d', $status_code);
+        }
+
+        // Append errors detail if present (e.g. Laravel validation bag).
+        if (!empty($decoded['errors']) && is_array($decoded['errors'])) {
+            $detail = [];
+            foreach ($decoded['errors'] as $field => $messages) {
+                $detail[] = $field . ': ' . (is_array($messages) ? implode(', ', $messages) : $messages);
+            }
+            $error_msg .= ' — ' . implode(' | ', $detail);
+        }
+
+        $error_msg = sprintf('HTTP %d — %s', $status_code, $error_msg);
 
         return [
             'success' => false,
-            'message' => $error_message
+            'message' => sprintf(__('Connection failed: %s', 'yaay365-sync'), $error_msg),
         ];
     }
 
@@ -131,19 +138,21 @@ class ApiClient
         }
 
         $endpoint = rtrim($this->api_url, '/') . $this->sync_endpoint;
-        
+
         $body = [
-            'company_id' => (int) $this->company_id,
-            'auth_email' => $this->auth_email,
-            'auth_password' => $this->auth_password,
             'products' => $products
         ];
 
         $this->logger->log('Syncing ' . count($products) . ' products to ' . $endpoint, 'info');
 
         $response = wp_remote_post($endpoint, [
-            'headers' => ['Content-Type' => 'application/json', 'Accept' => 'application/json'],
-            'body' => json_encode($body),
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept'       => 'application/json',
+                'X-Public-Key' => $this->public_key,
+                'X-Secret-Key' => $this->secret_key,
+            ],
+            'body'    => json_encode($body),
             'timeout' => 60
         ]);
 
