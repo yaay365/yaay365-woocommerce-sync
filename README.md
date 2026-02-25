@@ -1,6 +1,6 @@
 # Yaay365 Sync - WooCommerce Product Synchronization Plugin
 
-A WordPress plugin to sync WooCommerce products to the Yaay365 catalogue system via REST API using your Yaay365 account credentials (email and password).
+A WordPress plugin to sync WooCommerce products to the Yaay365 catalogue system via REST API using your Yaay365 API keys (Public Key and Secret Key).
 
 ## Features
 
@@ -20,14 +20,14 @@ A WordPress plugin to sync WooCommerce products to the Yaay365 catalogue system 
 - WordPress 5.8+
 - WooCommerce 5.0+
 - PHP 7.4+
-- Valid Yaay365 account (email and password)
+- Valid Yaay365 API key pair (Public Key and Secret Key)
 
 ## Installation
 
 1. Upload the plugin folder to `/wp-content/plugins/yaay365-sync/`
 2. Activate the plugin through the WordPress 'Plugins' menu
 3. Navigate to **Yaay365 Sync > Settings**
-4. Configure your email, password, and company ID
+4. Enter your **Public Key** and **Secret Key** (generate these in your Yaay365 dashboard under API Keys)
 5. Test the connection
 6. Start syncing!
 
@@ -37,10 +37,10 @@ A WordPress plugin to sync WooCommerce products to the Yaay365 catalogue system 
 
 Navigate to **Yaay365 Sync > Settings** and configure:
 
-- **API URL**: Automatically set to `https://yaay365.com`
-- **Email**: Your Yaay365 account email
-- **Password**: Your Yaay365 account password
-- **Company ID**: Your company ID in the Yaay365 system
+- **API URL**: Pre-set to `https://api.yaay365.com` — only change this if instructed
+- **Sync Endpoint**: Pre-set to `/v1/catalogues/sync` — only change this if instructed
+- **Public Key**: Your Yaay365 API public key (`X-Public-Key`)
+- **Secret Key**: Your Yaay365 API secret key (`X-Secret-Key`) — shown only once when generated in your Yaay365 dashboard
 
 ### Sync Options
 
@@ -77,13 +77,19 @@ Navigate to **Yaay365 Sync > Logs** to:
 
 ## API Format
 
-The plugin sends data to your API endpoint (`/api/catalogues/sync`) in this format:
+The plugin sends requests to `POST /v1/catalogues/sync` with authentication via HTTP headers. The company is resolved automatically from the API key — no `company_id` is needed in the body.
 
+**Request headers:**
+```
+Content-Type: application/json
+Accept: application/json
+X-Public-Key: your-public-key
+X-Secret-Key: your-secret-key
+```
+
+**Request body:**
 ```json
 {
-  "company_id": 1,
-  "auth_email": "user@example.com",
-  "auth_password": "your-password",
   "products": [
     {
       "name": "Product Name",
@@ -125,10 +131,10 @@ Your API should return:
 
 ### Connection Test Fails
 
-- API URL is automatically set to https://yaay365.com
-- Check email and password are correct
-- Ensure company ID exists
-- Check server can make outbound HTTP requests
+- API URL must be `https://api.yaay365.com` and endpoint `/v1/catalogues/sync`
+- Double-check your **Public Key** and **Secret Key** — the secret is shown only once when generated
+- If you lost the secret key, generate a new key pair in your Yaay365 dashboard
+- Check the server can make outbound HTTPS requests to `api.yaay365.com`
 
 ### Products Not Syncing
 
@@ -201,6 +207,15 @@ GPL v2 or later
 For support and documentation, visit: https://yaay365.com/support
 
 ## Changelog
+
+### 1.0.5
+- Replaced email/password/company ID authentication with API key authentication (Public Key + Secret Key)
+- Authentication now uses `X-Public-Key` and `X-Secret-Key` request headers
+- Company resolved automatically server-side — no `company_id` needed
+- Switched sync endpoint to `/v1/catalogues/sync`
+- Default API URL updated to `https://api.yaay365.com`
+- Added automatic migration of existing installs to new endpoint and auth method
+- Improved connection test error reporting
 
 ### 1.0.0
 - Initial release
