@@ -9,6 +9,7 @@ class ApiClient
     private $public_key;
     private $secret_key;
     private $logger;
+    private $ssl_verify;
 
     public function __construct($logger)
     {
@@ -18,16 +19,26 @@ class ApiClient
 
     private function load_settings()
     {
-        $this->api_url = get_option('yaay365_sync_api_url', 'https://api.yaay365.com');
+        $site_url = site_url();
+        $is_local = false;
 
-        // Always use the API-key endpoint; self-heal any stale stored value
-        $stored_endpoint = get_option('yaay365_sync_sync_endpoint', '/v1/catalogues/sync');
-        $legacy_endpoints = ['/api/catalogues/sync', '/catalogues/sync'];
-        if (in_array($stored_endpoint, $legacy_endpoints, true)) {
-            $stored_endpoint = '/v1/catalogues/sync';
-            update_option('yaay365_sync_sync_endpoint', $stored_endpoint);
+        $local_indicators = ['.test', '.local', 'localhost', '127.0.0.1'];
+        foreach ($local_indicators as $indicator) {
+            if (strpos($site_url, $indicator) !== false) {
+                $is_local = true;
+                break;
+            }
         }
-        $this->sync_endpoint = $stored_endpoint;
+
+        $this->api_url = 'https://api.yaay365.com';
+
+        if ($is_local) {
+            $this->ssl_verify = false;
+        } else {
+            $this->ssl_verify = true;
+        }
+
+        $this->sync_endpoint = '/v1/partner/catalogues/sync';
 
         $this->public_key = get_option('yaay365_sync_public_key');
         $this->secret_key = get_option('yaay365_sync_secret_key');
@@ -56,6 +67,7 @@ class ApiClient
                 'X-Public-Key'  => $this->public_key,
                 'X-Secret-Key'  => $this->secret_key,
             ],
+            'sslverify' => $this->ssl_verify,
             // Send one minimal product — empty array causes a 500 server-side.
             // Using a fixed SKU means it upserts the same record every time.
             'body'    => json_encode([
@@ -143,6 +155,11 @@ class ApiClient
             'products' => $products
         ];
 
+        $deal_id = get_option('yaay365_sync_company_deal');
+        if (!empty($deal_id)) {
+            $body['deal_id'] = intval($deal_id);
+        }
+
         $this->logger->log('Syncing ' . count($products) . ' products to ' . $endpoint, 'info');
 
         $response = wp_remote_post($endpoint, [
@@ -152,6 +169,7 @@ class ApiClient
                 'X-Public-Key' => $this->public_key,
                 'X-Secret-Key' => $this->secret_key,
             ],
+            'sslverify' => $this->ssl_verify,
             'body'    => json_encode($body),
             'timeout' => 60
         ]);
@@ -203,6 +221,53 @@ class ApiClient
             'success' => false,
             'message' => $error_message,
             'data' => $data
+        ];
+    }
+
+    /**
+     * Retrieve company/partner details and statistics.
+     */
+    public function get_partner_info()
+    {
+        if (!$this->is_configured()) {
+            return [
+                'success' => false,
+                'message' => __('API is not configured. Please enter your Public Key and Secret Key.', 'yaay365-sync')
+            ];
+        }
+
+        $endpoint = rtrim($this->api_url, '/') . '/v1/partner/info';
+
+        $response = wp_remote_get($endpoint, [
+            'headers' => [
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
+                'X-Public-Key'  => $this->public_key,
+                'X-Secret-Key'  => $this->secret_key,
+            ],
+            'sslverify' => $this->ssl_verify,
+            'timeout' => 15,
+        ]);
+
+        if (is_wp_error($response)) {
+            return [
+                'success' => false,
+                'message' => $response->get_error_message()
+            ];
+        }
+
+        $status_code  = wp_remote_retrieve_response_code($response);
+        $body_content = wp_remote_retrieve_body($response);
+        $decoded      = json_decode($body_content, true);
+
+        if ($status_code >= 200 && $status_code < 300) {
+            return $decoded;
+        }
+
+        $error_msg = !empty($decoded['message']) ? $decoded['message'] : sprintf('HTTP %d', $status_code);
+        return [
+            'success' => false,
+            'message' => sprintf(__('Failed to retrieve company info: %s', 'yaay365-sync'), $error_msg)
         ];
     }
 }

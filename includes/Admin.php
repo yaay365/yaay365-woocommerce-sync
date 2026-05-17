@@ -53,6 +53,7 @@ class Admin
         register_setting('yaay365_sync_settings', 'yaay365_sync_auto_sync');
         register_setting('yaay365_sync_settings', 'yaay365_sync_sync_on_save');
         register_setting('yaay365_sync_settings', 'yaay365_sync_log_enabled');
+        register_setting('yaay365_sync_settings', 'yaay365_sync_company_deal');
     }
 
     public function enqueue_scripts($hook)

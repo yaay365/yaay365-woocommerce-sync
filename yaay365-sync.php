@@ -3,17 +3,17 @@
  * Plugin Name: Yaay365 Sync
  * Plugin URI: https://yaay365.com
  * Description: Syncs WooCommerce products to Yaay365 Catalogue.
- * Version: 1.0.5
+ * Version: 2.0.5
  * Author: Yaay365
  * Author URI: https://yaay365.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: yaay365-sync
  * Domain Path: /languages
- * Requires at least: 5.8
- * Requires PHP: 7.4
- * WC requires at least: 5.0
- * WC tested up to: 8.5
+ * WP Requires at least: 6.0.0
+ * Requires PHP: 8.3
+ * WC requires at least: 9.0.1
+ * WC tested up to: 10.7.0
  */
 
 // Exit if accessed directly
@@ -23,6 +23,13 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants
 define('YAAY365_SYNC_VERSION', '1.0.5');
+
+// Declare compatibility with WooCommerce features (HPOS)
+add_action('before_woocommerce_init', function() {
+    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+    }
+});
 define('YAAY365_SYNC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('YAAY365_SYNC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('YAAY365_SYNC_PLUGIN_FILE', __FILE__);
@@ -84,12 +91,13 @@ add_action('plugins_loaded', 'yaay365_sync_init');
 register_activation_hook(__FILE__, function() {
     // Create options with default values
     add_option('yaay365_sync_api_url', 'https://api.yaay365.com');
-    add_option('yaay365_sync_sync_endpoint', '/v1/catalogues/sync');
+    add_option('yaay365_sync_sync_endpoint', '/v1/partner/catalogues/sync');
     add_option('yaay365_sync_public_key', '');
     add_option('yaay365_sync_secret_key', '');
     add_option('yaay365_sync_auto_sync', 'no');
     add_option('yaay365_sync_sync_on_save', 'yes');
     add_option('yaay365_sync_log_enabled', 'yes');
+    add_option('yaay365_sync_company_deal', '');
     
     // Schedule cron job if auto sync is enabled
     if (!wp_next_scheduled('yaay365_sync_cron')) {
