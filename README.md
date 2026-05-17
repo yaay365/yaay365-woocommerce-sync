@@ -37,8 +37,6 @@ A WordPress plugin to sync WooCommerce products to the Yaay365 catalogue system 
 
 Navigate to **Yaay365 Sync > Settings** and configure:
 
-- **API URL**: Pre-set to `https://api.yaay365.com` — only change this if instructed
-- **Sync Endpoint**: Pre-set to `/v1/catalogues/sync` — only change this if instructed
 - **Public Key**: Your Yaay365 API public key (`X-Public-Key`)
 - **Secret Key**: Your Yaay365 API secret key (`X-Secret-Key`) — shown only once when generated in your Yaay365 dashboard
 
@@ -77,7 +75,7 @@ Navigate to **Yaay365 Sync > Logs** to:
 
 ## API Format
 
-The plugin sends requests to `POST /v1/catalogues/sync` with authentication via HTTP headers. The company is resolved automatically from the API key — no `company_id` is needed in the body.
+The plugin sends requests to `POST /v1/partner/catalogues/sync` with authentication via HTTP headers. The company is resolved automatically from the API key — no `company_id` is needed in the body.
 
 **Request headers:**
 ```
@@ -131,7 +129,7 @@ Your API should return:
 
 ### Connection Test Fails
 
-- API URL must be `https://api.yaay365.com` and endpoint `/v1/catalogues/sync`
+- API URL must be `https://api.yaay365.com` and endpoint `/v1/partner/catalogues/sync`
 - Double-check your **Public Key** and **Secret Key** — the secret is shown only once when generated
 - If you lost the secret key, generate a new key pair in your Yaay365 dashboard
 - Check the server can make outbound HTTPS requests to `api.yaay365.com`
@@ -208,11 +206,22 @@ For support and documentation, visit: https://yaay365.com/support
 
 ## Changelog
 
+### 2.0.5 (2026-05-18)
+- Overhauled settings menu: completely hid the "API URL" and "Sync Endpoint" configuration fields and hardcoded them directly to point securely to the production environment
+- Premium Redesign: introduced a stunning, custom-branded top navigation header containing the official company logo across all plugin subpages
+- Favicon Branding: overhauled styles to map primary tokens (borders, glows, buttons, inputs) to the company's official crimson red brand color (#e31e24)
+- Stats Grid Alignment: optimized the merchant dashboard stats panel to align all 5 statistics panels cleanly in a single row on desktop screens
+- Deal Selection & Sync integration: added a dropdown in the settings panel allowing merchants to choose and link their active Deal, automatically sending it to the backend on sync
+- Robust Sync Fallback: resolved the "Field 'deal_id' doesn't have a default value" DB constraint by validating and resolving deal_id on the API controller, automatically falling back to active deals or dynamically generating a default approved sync deal on the fly
+- Logs Stability: fixed a fatal PHP error on the log panel caused by calling a non-existent method, wrapping logs inside a sleek dark developer terminal
+- Declarative HPOS Compatibility: added explicit declaration support for High-Performance Order Storage (HPOS) to eliminate WooCommerce admin warning flags
+- Upgraded System Requirements: modernized compatibility requirements to support PHP 8.3, WordPress 6.0+, and WooCommerce 9.0+
+
 ### 1.0.5
 - Replaced email/password/company ID authentication with API key authentication (Public Key + Secret Key)
 - Authentication now uses `X-Public-Key` and `X-Secret-Key` request headers
 - Company resolved automatically server-side — no `company_id` needed
-- Switched sync endpoint to `/v1/catalogues/sync`
+- Switched sync endpoint to `/v1/partner/catalogues/sync`
 - Default API URL updated to `https://api.yaay365.com`
 - Added automatic migration of existing installs to new endpoint and auth method
 - Improved connection test error reporting
